@@ -12,3 +12,6 @@ license="MIT"
 
 [dependencies]
 reed-solomon-erasure = { version = "3.1", features=["pure-rust"] }
+
+[dev-dependencies]
+rand = "0.8.5"
