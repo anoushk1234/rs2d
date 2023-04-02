@@ -83,6 +83,6 @@ mod tests {
             }
             original.push(elem.clone());
         }
-        encode(original, 10);
+        encode(original, shard_len);
     }
 }
