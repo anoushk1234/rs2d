@@ -23,7 +23,13 @@ pub fn encode(data: Vec<Vec<u8>>, shard_len: usize) {
     // once data is over fill digest
     let data_array_length = data.len();
     let sq_root = (data_array_length as f64).sqrt();
+
     let mut sq_root_rounded = sq_root.ceil() as usize; // 45
+                                                       // print all thre variables above
+    println!(
+        "data_array_length: {:?} sq_root: {:?} sq_root_rounded: {:?}",
+        data_array_length, sq_root, sq_root_rounded
+    );
     if sq_root_rounded % 5 == 0 {
         sq_root_rounded += 1;
     }
@@ -34,26 +40,24 @@ pub fn encode(data: Vec<Vec<u8>>, shard_len: usize) {
         let col = i % sq_root_rounded;
         data_matrix[row][col] = data[i].clone();
     }
-    // let mut data_matrix = data_matrix
-    //     .as_slice()
-    //     .iter()
-    //     .map(|a| a.as_slice())
-    //     .collect::<Vec<&[Vec<u8>]>>();
+    for i in 0..sq_root_rounded {
+        let mut parity_prefill = vec![vec![0u8; shard_len]; sq_root_rounded];
+        data_matrix[i].append(&mut parity_prefill);
+    }
 
-    // horizontally encode each row
-    // println!("len` :{:?}", data_matrix.len());
     let mut m = Matrix::default();
     m.data = data_matrix.clone();
     m.row_count = sq_root_rounded;
     m.col_count = sq_root_rounded;
 
     for mut row in data_matrix.clone() {
-        let r = ReedSolomon::new(sq_root_rounded / 2, sq_root_rounded / 2).unwrap(); // assuming n:k is 1:1
+        let r = ReedSolomon::new(sq_root_rounded, sq_root_rounded).unwrap(); // assuming n:k is 1:1
         m.erasure_matrix.push(r.clone());
 
         let mut x: Vec<&mut [u8]> = row.iter_mut().map(|f| f.as_mut_slice()).collect();
         r.encode(&mut x).unwrap();
     }
+    println!("data_matrix: {:?}", data_matrix);
 }
 
 pub fn decode() {}
@@ -66,17 +70,19 @@ mod tests {
     fn test_encode() {
         // make a 2d vec of 23 numbers from 1 to 23
         let mut original = vec![];
-        for _ in 0..2000 {
-            let mut elem: Vec<u8> = Vec::with_capacity(1280 as usize);
-            for _ in 0..1280 {
+        let data_len = 10;
+        let shard_len = 10;
+        for _ in 0..data_len {
+            let mut elem: Vec<u8> = Vec::with_capacity(shard_len as usize);
+            for _ in 0..shard_len {
                 elem.push(0);
             }
             // let mut elem = elem.into_boxed_slice();
-            for i in 0..1280 {
+            for i in 0..shard_len {
                 elem[i as usize] = rand::thread_rng().gen::<u8>()
             }
             original.push(elem.clone());
         }
-        encode(original, 1280);
+        encode(original, 10);
     }
 }
