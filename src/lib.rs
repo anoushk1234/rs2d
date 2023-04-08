@@ -25,34 +25,34 @@ pub fn encode(data: Vec<Vec<u8>>, shard_len: usize) {
     let sq_root = (data_array_length as f64).sqrt();
 
     let mut sq_root_rounded = sq_root.ceil() as usize; // 45
-                                                       // print all thre variables above
-                                                       // println!(
-                                                       //     "data_array_length: {:?} sq_root: {:?} sq_root_rounded: {:?}",
-                                                       //     data_array_length, sq_root, sq_root_rounded
-                                                       // );
+
     if sq_root_rounded % 2 != 0 {
-        sq_root_rounded += 1;
+        sq_root_rounded += 1; // doing this so we can split data and coding chunks equally
     }
-    let mut data_matrix = vec![vec![vec![0; shard_len]; sq_root_rounded]; sq_root_rounded];
+    println!("sq_root_rounded: {}", sq_root_rounded);
+    let mut data_matrix = vec![vec![vec![0; shard_len]; sq_root_rounded]; sq_root_rounded * 2];
     for i in 0..data_array_length {
         // 2000
         let row = i / sq_root_rounded;
         let col = i % sq_root_rounded;
         data_matrix[row][col] = data[i].clone();
     }
-    for i in 0..sq_root_rounded {
+    println!(
+        "data_matrix: {:?} len: {:?}",
+        data_matrix,
+        data_matrix.len()
+    );
+    for i in 0..(sq_root_rounded * 2) {
         let mut parity_prefill = vec![vec![0u8; shard_len]; sq_root_rounded];
         data_matrix[i].append(&mut parity_prefill);
     }
+    println!(
+        "data_matrix: {:?} len: {:?}",
+        data_matrix,
+        data_matrix.len()
+    );
 
-    // let mut m = Matrix::default();
-    // m.data = data_matrix.clone();
-    // m.row_count = sq_root_rounded;
-    // m.col_count = sq_root_rounded;
-    // println!("data_matrix: {:?}", data_matrix[data_matrix.len() - 1]);
-    // let mut new_data_matrix: Vec<Vec<&mut [u8]>> = vec![];
-    println!("data_matrix1: {:?}", data_matrix);
-    let data_matrix = data_matrix
+    let mut data_matrix = data_matrix
         .iter_mut()
         .map(|row| {
             let r = ReedSolomon::new(sq_root_rounded, sq_root_rounded).unwrap(); // assuming n:k is 1:1
@@ -64,9 +64,33 @@ pub fn encode(data: Vec<Vec<u8>>, shard_len: usize) {
             return x;
         })
         .collect::<Vec<Vec<&mut [u8]>>>();
-    println!("data_matrix2: {:?}", data_matrix);
+    println!(
+        "data_matrix: {:?} len: {:?}",
+        data_matrix,
+        data_matrix.len()
+    );
+    let data_matrix = data_matrix
+        .iter_mut()
+        .enumerate()
+        .map(|(i, row)| {
+            let mut x = row[sq_root_rounded..].to_vec();
+            data_matrix[sq_root_rounded + i].append(&mut x);
+        })
+        .collect::<Vec<Vec<Vec<u8>>>>();
     // for i in 0..sq_root_rounded {
-    //   let next_layer = vec![vec![0u8; shard_len]; sq_root_rounded];
+    //     let mut parity_prefill = vec![vec![0u8; shard_len]; sq_root_rounded * 2];
+    //     let mut x = parity_prefill
+    //         .clone()
+    //         .iter_mut()
+    //         .map(|f| f.as_mut_slice())
+    //         .collect();
+    //
+    // }
+    // for i in 0..sq_root_rounded {
+    //     data_matrix[i].append(&mut vec![
+    //         vec![0u8; shard_len].as_mut_slice();
+    //         sq_root_rounded
+    //     ]);
     // }
 }
 
