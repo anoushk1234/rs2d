@@ -51,32 +51,67 @@ pub fn encode(data: Vec<Vec<u8>>, shard_len: usize) {
         data_matrix,
         data_matrix.len()
     );
-
+    let mut vertical_erasure_swap: Vec<Vec<Vec<u8>>> = vec![];
     let mut data_matrix = data_matrix
         .iter_mut()
-        .map(|row| {
+        .enumerate()
+        .map(|(i, row)| {
             let r = ReedSolomon::new(sq_root_rounded, sq_root_rounded).unwrap(); // assuming n:k is 1:1
                                                                                  // let mut row = row.clone(); // m.erasure_matrix.push(r.clone());
 
             let mut x: Vec<&mut [u8]> = row.iter_mut().map(|f| f.as_mut_slice()).collect();
 
             r.encode(&mut x).unwrap();
+
+            if i < sq_root_rounded {
+                let y = x.iter().map(|f| f.to_vec()).collect::<Vec<Vec<u8>>>();
+
+                vertical_erasure_swap.push(y[sq_root_rounded..y.len()].to_vec().clone());
+            }
             return x;
         })
         .collect::<Vec<Vec<&mut [u8]>>>();
+    // println!(
+    //     "data_matrix: {:?} vs: {:?}",
+    //     data_matrix, vertical_erasure_swap[0][0]
+    // );
+    let data_matrix = data_matrix
+        .into_iter()
+        .map(|f| {
+            let x = f.iter().map(|f| f.to_vec()).collect::<Vec<Vec<u8>>>();
+            return x;
+        })
+        .collect::<Vec<Vec<Vec<u8>>>>();
+    let data_matrix = data_matrix
+        .into_iter()
+        .enumerate()
+        .map(|(i, mut row)| {
+            if i < sq_root_rounded {
+                return row;
+            } else {
+                for item_index in 0..row.len() {
+                    if item_index < sq_root_rounded {
+                        row[item_index] =
+                            vertical_erasure_swap[i - sq_root_rounded][item_index].clone();
+                    }
+                }
+                return row;
+            }
+        })
+        .collect::<Vec<Vec<Vec<u8>>>>();
     println!(
-        "data_matrix: {:?} len: {:?}",
+        "data_matrix 3: {:?} len: {:?}",
         data_matrix,
         data_matrix.len()
     );
-    let data_matrix = data_matrix
-        .iter_mut()
-        .enumerate()
-        .map(|(i, row)| {
-            let mut x = row[sq_root_rounded..].to_vec();
-            data_matrix[sq_root_rounded + i].append(&mut x);
-        })
-        .collect::<Vec<Vec<Vec<u8>>>>();
+    // let data_matrix = data_matrix[sq_root_rounded..]
+    //     .to_vec()
+    //     .into_iter()
+    //     .map(|row| {
+    //         let x = &row[sq_root_rounded..].into_iter().map(f);
+    //         return x;
+    //     })
+    //     .collect::<Vec<Vec<&mut [u8]>>>();
     // for i in 0..sq_root_rounded {
     //     let mut parity_prefill = vec![vec![0u8; shard_len]; sq_root_rounded * 2];
     //     let mut x = parity_prefill
