@@ -82,7 +82,7 @@ pub fn encode(data: Vec<Vec<u8>>, shard_len: usize) {
             return x;
         })
         .collect::<Vec<Vec<Vec<u8>>>>();
-    let data_matrix = data_matrix
+    let mut data_matrix = data_matrix
         .into_iter()
         .enumerate()
         .map(|(i, mut row)| {
@@ -104,6 +104,33 @@ pub fn encode(data: Vec<Vec<u8>>, shard_len: usize) {
         data_matrix,
         data_matrix.len()
     );
+    let mut data_matrix = data_matrix
+        .iter_mut()
+        .enumerate()
+        .map(|(i, row)| {
+            if i >= sq_root_rounded {
+                let r = ReedSolomon::new(sq_root_rounded, sq_root_rounded).unwrap(); // assuming n:k is 1:1
+                                                                                     // let mut row = row.clone(); // m.erasure_matrix.push(r.clone());
+
+                let mut x: Vec<&mut [u8]> = row.iter_mut().map(|f| f.as_mut_slice()).collect();
+
+                r.encode(&mut x).unwrap();
+
+                return x;
+            } else {
+                return row
+                    .iter_mut()
+                    .map(|f| f.as_mut_slice())
+                    .collect::<Vec<&mut [u8]>>();
+            }
+        })
+        .collect::<Vec<Vec<&mut [u8]>>>();
+    println!(
+        "data_matrix 4: {:?} len: {:?}",
+        data_matrix,
+        data_matrix.len()
+    );
+
     // let data_matrix = data_matrix[sq_root_rounded..]
     //     .to_vec()
     //     .into_iter()
