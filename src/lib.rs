@@ -1,26 +1,17 @@
 use std::vec;
 
 use reed_solomon_erasure::*;
-
+use solana_merkle_tree::MerkleTree;
 type Shard = Vec<u8>;
-#[derive(PartialEq, Debug, Clone, Default)]
-pub struct Matrix {
-    row_count: usize,
-    col_count: usize,
-    data: Vec<Vec<Shard>>,
-    erasure_matrix: Vec<ReedSolomon>,
+pub mod macros;
+
+#[derive(Debug)]
+pub struct EncodedData {
+    pub row_commitments: Vec<Vec<u8>>,
+    pub col_commitments: Vec<Vec<u8>>,
+    pub final_commitment: Vec<u8>,
 }
-pub fn encode(data: Vec<Vec<u8>>, shard_len: usize) {
-    // let data_matrix =
-    // 23 shards
-    // sqrt of 23 = 4.79
-    // round up 4.79 ~ 5
-    // 5^2 =25
-    // 25-23= 2
-    // 5x5
-    // construct zero 2d array of 5x5
-    // sequentially fill matrix with data
-    // once data is over fill digest
+pub fn encode(data: Vec<Shard>, shard_len: usize) -> EncodedData {
     let data_array_length = data.len();
     let sq_root = (data_array_length as f64).sqrt();
 
@@ -29,7 +20,7 @@ pub fn encode(data: Vec<Vec<u8>>, shard_len: usize) {
     if sq_root_rounded % 2 != 0 {
         sq_root_rounded += 1; // doing this so we can split data and coding chunks equally
     }
-    println!("sq_root_rounded: {}", sq_root_rounded);
+
     let mut data_matrix = vec![vec![vec![0; shard_len]; sq_root_rounded]; sq_root_rounded * 2];
     for i in 0..data_array_length {
         // 2000
@@ -37,22 +28,14 @@ pub fn encode(data: Vec<Vec<u8>>, shard_len: usize) {
         let col = i % sq_root_rounded;
         data_matrix[row][col] = data[i].clone();
     }
-    println!(
-        "data_matrix: {:?} len: {:?}",
-        data_matrix,
-        data_matrix.len()
-    );
+
     for i in 0..(sq_root_rounded * 2) {
         let mut parity_prefill = vec![vec![0u8; shard_len]; sq_root_rounded];
         data_matrix[i].append(&mut parity_prefill);
     }
-    println!(
-        "data_matrix: {:?} len: {:?}",
-        data_matrix,
-        data_matrix.len()
-    );
-    let mut vertical_erasure_swap: Vec<Vec<Vec<u8>>> = vec![];
-    let mut data_matrix = data_matrix
+
+    let mut vertical_erasure_swap: Vec<Vec<Shard>> = vec![];
+    let data_matrix = data_matrix
         .iter_mut()
         .enumerate()
         .map(|(i, row)| {
@@ -64,24 +47,15 @@ pub fn encode(data: Vec<Vec<u8>>, shard_len: usize) {
             r.encode(&mut x).unwrap();
 
             if i < sq_root_rounded {
-                let y = x.iter().map(|f| f.to_vec()).collect::<Vec<Vec<u8>>>();
+                let y = x.iter().map(|f| f.to_vec()).collect::<Vec<Shard>>();
 
                 vertical_erasure_swap.push(y[sq_root_rounded..y.len()].to_vec().clone());
             }
             return x;
         })
         .collect::<Vec<Vec<&mut [u8]>>>();
-    // println!(
-    //     "data_matrix: {:?} vs: {:?}",
-    //     data_matrix, vertical_erasure_swap[0][0]
-    // );
-    let data_matrix = data_matrix
-        .into_iter()
-        .map(|f| {
-            let x = f.iter().map(|f| f.to_vec()).collect::<Vec<Vec<u8>>>();
-            return x;
-        })
-        .collect::<Vec<Vec<Vec<u8>>>>();
+
+    let data_matrix = owned_vec!(data_matrix);
     let mut data_matrix = data_matrix
         .into_iter()
         .enumerate()
@@ -98,13 +72,9 @@ pub fn encode(data: Vec<Vec<u8>>, shard_len: usize) {
                 return row;
             }
         })
-        .collect::<Vec<Vec<Vec<u8>>>>();
-    println!(
-        "data_matrix 3: {:?} len: {:?}",
-        data_matrix,
-        data_matrix.len()
-    );
-    let mut data_matrix = data_matrix
+        .collect::<Vec<Vec<Shard>>>();
+
+    let data_matrix = data_matrix
         .iter_mut()
         .enumerate()
         .map(|(i, row)| {
@@ -125,38 +95,49 @@ pub fn encode(data: Vec<Vec<u8>>, shard_len: usize) {
             }
         })
         .collect::<Vec<Vec<&mut [u8]>>>();
-    println!(
-        "data_matrix 4: {:?} len: {:?}",
-        data_matrix,
-        data_matrix.len()
-    );
 
-    // let data_matrix = data_matrix[sq_root_rounded..]
-    //     .to_vec()
-    //     .into_iter()
-    //     .map(|row| {
-    //         let x = &row[sq_root_rounded..].into_iter().map(f);
-    //         return x;
-    //     })
-    //     .collect::<Vec<Vec<&mut [u8]>>>();
-    // for i in 0..sq_root_rounded {
-    //     let mut parity_prefill = vec![vec![0u8; shard_len]; sq_root_rounded * 2];
-    //     let mut x = parity_prefill
-    //         .clone()
-    //         .iter_mut()
-    //         .map(|f| f.as_mut_slice())
-    //         .collect();
-    //
-    // }
-    // for i in 0..sq_root_rounded {
-    //     data_matrix[i].append(&mut vec![
-    //         vec![0u8; shard_len].as_mut_slice();
-    //         sq_root_rounded
-    //     ]);
-    // }
+    let row_commitments = data_matrix
+        .iter()
+        .map(|row| {
+            MerkleTree::new(&row)
+                .get_root()
+                .unwrap()
+                .as_ref()
+                .to_owned()
+        })
+        .collect::<Vec<Vec<u8>>>();
+
+    let data_matrix = owned_vec!(data_matrix);
+    let mut col_leaves = vec![];
+
+    for col_index in 0..sq_root_rounded * 2 {
+        for row_index in 0..sq_root_rounded * 2 {
+            col_leaves.push(data_matrix[row_index][col_index].clone());
+        }
+    }
+    let col_commitments = data_matrix
+        .iter()
+        .map(|col| {
+            MerkleTree::new(&col)
+                .get_root()
+                .unwrap()
+                .as_ref()
+                .to_owned()
+        })
+        .collect::<Vec<Vec<u8>>>();
+
+    let final_commitment =
+        MerkleTree::new(&[row_commitments.clone(), col_commitments.clone()].concat())
+            .get_root()
+            .unwrap()
+            .as_ref()
+            .to_vec();
+    EncodedData {
+        row_commitments,
+        col_commitments,
+        final_commitment,
+    }
 }
-
-pub fn decode() {}
 
 #[cfg(test)]
 mod tests {
@@ -169,7 +150,7 @@ mod tests {
         let data_len = 9;
         let shard_len = 10;
         for _ in 0..data_len {
-            let mut elem: Vec<u8> = Vec::with_capacity(shard_len as usize);
+            let mut elem: Shard = Vec::with_capacity(shard_len as usize);
             for _ in 0..shard_len {
                 elem.push(0);
             }

@@ -6,12 +6,12 @@ description="A crate for encoding and decoding data in a 2D Reed-Solomon matrix.
 authors = ["Anoushk Kharangate <kharangateanoushk04@gmail.com>", "Harsh Patel <hp80738@gmail.com>"]
 readme = "README.md"
 repository = "https://github.com/anoushk1234/rs2d"
-license-file="LICENSE"
 license="MIT"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 reed-solomon-erasure = { version = "3.1", features=["pure-rust"] }
+solana-merkle-tree = "1.15.2"
 
 [dev-dependencies]
 rand = "0.8.5"
