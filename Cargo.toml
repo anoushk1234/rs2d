@@ -6,7 +6,7 @@ description="A crate for encoding and decoding data in a 2D Reed-Solomon matrix.
 authors = ["Anoushk Kharangate <kharangateanoushk04@gmail.com>", "Harsh Patel <hp80738@gmail.com>"]
 readme = "README.md"
 categories = ["encoding"]
-keywords = ["reed-solomon","2d","erasure"]
+keywords = ["reed-solomon","2d","erasure","encoding"]
 repository = "https://github.com/anoushk1234/rs2d"
 license="MIT"
 
