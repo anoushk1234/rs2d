@@ -2,7 +2,7 @@ use std::vec;
 
 use reed_solomon_erasure::*;
 use solana_merkle_tree::MerkleTree;
-type Shard = Vec<u8>;
+pub type Shard = Vec<u8>;
 pub mod macros;
 
 #[derive(Debug)]
@@ -147,8 +147,8 @@ mod tests {
     fn test_encode() {
         // make a 2d vec of 23 numbers from 1 to 23
         let mut original = vec![];
-        let data_len = 9;
-        let shard_len = 10;
+        let data_len = 1560;
+        let shard_len = 1280;
         for _ in 0..data_len {
             let mut elem: Shard = Vec::with_capacity(shard_len as usize);
             for _ in 0..shard_len {

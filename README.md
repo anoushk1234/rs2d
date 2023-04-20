@@ -47,3 +47,9 @@ cr1  cr2  cr3  cr4  cr5     cr6  cr7  cr8  cr9  cr10
 - Only works when n and k are the same.
 - No performance optimizations.
 - Data Shard has to be a byte array.
+
+# TODO
+- [x] Encode function
+- [ ] Decode/Verify function
+- [ ] Test Cases
+- [x] Benchmarks
