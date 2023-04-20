@@ -2,7 +2,7 @@
 
 [![Crates](https://img.shields.io/crates/v/rs2d.svg)](https://crates.io/crates/rs2d)
 [![Documentation](https://docs.rs/rs2d/badge.svg)](https://docs.rs/rs2d)
-[![dependency status](https://deps.rs/repo/github/darrenldl/rs2d/status.svg)](https://deps.rs/repo/github/darrenldl/rs2d)
+[![dependency status](https://deps.rs/crate/rs2d/0.1.0/status.svg)](https://deps.rs/crate/rs2d/0.1.0)
 A crate for encoding and decoding data in a 2D Reed-Solomon matrix.
 
 Inspired by the [Mustafa Al-Bassam's Paper](https://arxiv.org/pdf/1809.09044.pdf).
